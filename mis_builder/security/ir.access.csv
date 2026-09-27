@@ -1,0 +1,13 @@
+id,name,model_id,group_id/id,operation,domain
+access_mis_report_kpi_user,mis.report.kpi.user,mis.report.kpi,base.group_user,crud,
+access_mis_report_query_user,mis.report.query.user,mis.report.query,base.group_user,crud,
+access_mis_report_user,mis.report.user,mis.report,base.group_user,crud,
+access_mis_report_instance_period_user,mis.report.instance.period.user,mis.report.instance.period,base.group_user,crud,
+access_mis_report_instance_period_sum_user,mis.report.instance.period.sum.user,mis.report.instance.period.sum,base.group_user,crud,
+access_mis_report_instance_user,mis.report.instance.user,mis.report.instance,base.group_user,crud,
+access_mis_report_subkpi_user,mis.report.subkpi.user,mis.report.subkpi,base.group_user,crud,
+access_mis_report_kpi_expression_user,mis.report.kpi.expression.user,mis.report.kpi.expression,base.group_user,crud,
+access_mis_report_subreport_user,mis.report.subreport.user,mis.report.subreport,base.group_user,crud,
+access_mis_report_style_user,mis.report.style.user,mis.report.style,base.group_user,crud,
+access_add_mis_report_instance_dashboard_wizard_user,add.mis.report.instance.dashboard.wizard.user,add.mis.report.instance.dashboard.wizard,base.group_user,crud,
+access_mis_report_instance_annotation_user,mis.report.instance.annotation.user,mis.report.instance.annotation,base.group_user,crud,

@@ -1,0 +1,11 @@
+id,name,model_id,group_id/id,operation,domain
+access_mis_budget_abstract_user,mis.budget.abstract.user,mis.budget.abstract,base.group_user,crud,
+access_mis_budget_item_abstract_user,mis.budget.item.abstract.user,mis.budget.item.abstract,base.group_user,crud,
+access_mis_budget_user,mis.budget.user,mis.budget,base.group_user,crud,
+access_mis_budget_item_user,mis.budget.item.user,mis.budget.item,base.group_user,crud,
+access_mis_budget_by_account_user,mis.budget.by.account.user,mis.budget.by.account,base.group_user,crud,
+access_mis_budget_by_account_item_user,mis.budget.by.account.item.user,mis.budget.by.account.item,base.group_user,crud,
+access_mis_report_kpi_user,mis.report.kpi.user,mis.report.kpi,base.group_user,crud,
+access_mis_report_instance_user,mis.report.instance.user,mis.report.instance,base.group_user,crud,
+access_mis_report_instance_period_user,mis.report.instance.period.user,mis.report.instance.period,base.group_user,crud,
+access_mis_report_kpi_expression_user,mis.report.kpi.expression.user,mis.report.kpi.expression,base.group_user,crud,
