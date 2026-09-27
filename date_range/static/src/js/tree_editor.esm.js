@@ -1,20 +1,28 @@
+/** @odoo-module **/
+
 import {
     deserializeDate,
     deserializeDateTime,
     serializeDate,
     serializeDateTime,
 } from "@web/core/l10n/dates";
-import {Select} from "@web/core/tree_editor/tree_editor_components";
-import {TreeEditor} from "@web/core/tree_editor/tree_editor";
-import {patch} from "@web/core/utils/patch";
+import { Select } from "@web/core/tree_editor/tree_editor_components";
+import { TreeEditor } from "@web/core/tree_editor/tree_editor";
+import { patch } from "@web/core/utils/patch";
 
-function toDateTime(date, type, end) {
+const { DateTime } = luxon;
+
+/**
+ * Convert a date (or datetime) value to the format expected by the domain.
+ * When end === true and the field is datetime, set time to 23:59:59.
+ */
+function toDateTime(date, type, end = false) {
     if (type === "date") {
         return date;
     }
     let jsDate = deserializeDate(date);
     if (end) {
-        jsDate = luxon.DateTime.fromObject({
+        jsDate = DateTime.fromObject({
             ...jsDate.c,
             hour: 23,
             minute: 59,
@@ -24,6 +32,10 @@ function toDateTime(date, type, end) {
     return serializeDateTime(jsDate);
 }
 
+/**
+ * Convert a datetime value back to a pure date string (used for matching
+ * against date.range records).
+ */
 function fromDateTime(date, type) {
     if (type === "date") {
         return date;
@@ -33,42 +45,62 @@ function fromDateTime(date, type) {
 
 patch(TreeEditor.prototype, {
     setup() {
-        super.setup();
+        super.setup(...arguments);
+        // Keep the last operator that was selected so we can filter ranges
+        this.update_operator = null;
     },
+
     getValueEditorInfo(node) {
         const fieldDef = this.getFieldDef(node.path);
-        const info = super.getValueEditorInfo.apply(this, arguments);
+        const info = super.getValueEditorInfo(...arguments);
+
+        // Only enhance date / datetime fields that use a daterange operator
         if (
             fieldDef &&
             (fieldDef.type === "date" || fieldDef.type === "datetime") &&
-            node.operator.includes("daterange")
+            String(node.operator).includes("daterange")
         ) {
             info.component = Select;
         }
-        if (typeof this.env.domain !== "undefined") {
-            let dateRanges = this.env.domain.dateRanges;
-            if (this.update_operator && this.update_operator.split("daterange_")[1]) {
-                dateRanges = this.env.domain.dateRanges.filter(
-                    (range) =>
-                        range.type_id[0] ===
-                        Number(this.update_operator.split("daterange_")[1])
+
+        // env.domain is injected by the DomainSelector patch via useChildSubEnv
+        if (this.env.domain) {
+            let dateRanges = this.env.domain.dateRanges || [];
+
+            // When a specific date-range type was chosen (daterange_<id>)
+            // keep only ranges that belong to that type
+            if (
+                this.update_operator &&
+                String(this.update_operator).includes("daterange_")
+            ) {
+                const typeId = Number(
+                    String(this.update_operator).split("daterange_")[1]
+                );
+                dateRanges = dateRanges.filter(
+                    (range) => range.type_id?.[0] === typeId
                 );
             }
+
             patch(info, {
-                extractProps({value, update}) {
-                    const props = super.extractProps.apply(this, arguments);
+                extractProps({ value, update }) {
+                    const props = super.extractProps(...arguments);
+
                     if (
                         fieldDef &&
                         (fieldDef.type === "date" || fieldDef.type === "datetime") &&
-                        node.operator.includes("daterange")
+                        String(node.operator).includes("daterange")
                     ) {
+                        // Try to find the currently selected range
                         let selected = dateRanges.find(
                             (range) =>
                                 range.date_start ===
-                                    fromDateTime(value[1], fieldDef.type) &&
-                                range.date_end === fromDateTime(value[0], fieldDef.type)
+                                    fromDateTime(value?.[1], fieldDef.type) &&
+                                range.date_end ===
+                                    fromDateTime(value?.[0], fieldDef.type)
                         );
-                        if (!selected) {
+
+                        // Fallback to the first available range
+                        if (!selected && dateRanges.length) {
                             selected = dateRanges[0];
                             update([
                                 toDateTime(selected.date_end, fieldDef.type),
@@ -80,55 +112,74 @@ patch(TreeEditor.prototype, {
                             options: dateRanges.map((dt) => [dt.id, dt.name]),
                             update: (v) => {
                                 const range = dateRanges.find((r) => r.id === v);
+                                if (!range) {
+                                    return;
+                                }
                                 update([
                                     toDateTime(range.date_end, fieldDef.type),
                                     toDateTime(range.date_start, fieldDef.type, true),
                                 ]);
                             },
-                            value: selected.id,
+                            value: selected?.id ?? false,
                         };
                     }
-
                     return props;
                 },
+
                 isSupported(value) {
-                    if (node.operator.includes("daterange")) {
+                    if (String(node.operator).includes("daterange")) {
                         return Array.isArray(value) && value.length === 2;
                     }
-                    return super.isSupported.apply(this, arguments);
+                    return super.isSupported(...arguments);
                 },
             });
         }
+
         return info;
     },
 
     getOperatorEditorInfo(node) {
-        const info = super.getOperatorEditorInfo(node);
+        const info = super.getOperatorEditorInfo(...arguments);
+
         patch(info, {
             isSupported([operator]) {
-                if (node.operator.includes("daterange")) {
+                if (String(node.operator).includes("daterange")) {
                     return (
-                        typeof operator === "string" && operator.includes("daterange")
+                        typeof operator === "string" &&
+                        String(operator).includes("daterange")
                     );
                 }
-                return super.isSupported.apply(this, arguments);
+                return super.isSupported(...arguments);
             },
         });
+
         return info;
     },
 
-    updateLeafOperator(node, operator) {
-        super.updateLeafOperator.apply(this, arguments);
+    /**
+     * Odoo 20 signature: updateLeafOperator(node, operator, negate)
+     */
+    updateLeafOperator(node, operator, negate) {
+        super.updateLeafOperator(...arguments);
+
         this.update_operator = operator;
         const fieldDef = this.getFieldDef(node.path);
-        if (typeof this.env.domain !== "undefined") {
-            let dateRanges = this.env.domain.dateRanges.filter(
-                (range) => range.type_id[0] === Number(operator.split("daterange_")[1])
-            );
-            if (!dateRanges.length) {
-                dateRanges = this.env.domain.dateRanges;
+
+        if (this.env.domain && String(operator).includes("daterange")) {
+            let dateRanges = this.env.domain.dateRanges || [];
+
+            // Prefer ranges of the selected type
+            const typeId = Number(String(operator).split("daterange_")[1]);
+            if (typeId) {
+                const filtered = dateRanges.filter(
+                    (range) => range.type_id?.[0] === typeId
+                );
+                if (filtered.length) {
+                    dateRanges = filtered;
+                }
             }
-            if (operator.includes("daterange") && dateRanges) {
+
+            if (dateRanges.length && fieldDef) {
                 node.value = [
                     toDateTime(dateRanges[0].date_end, fieldDef.type),
                     toDateTime(dateRanges[0].date_start, fieldDef.type, true),
