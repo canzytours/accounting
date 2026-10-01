@@ -20,14 +20,16 @@ function toDateTime(date, type, end = false) {
     if (type === "date") {
         return date;
     }
-    let jsDate = deserializeDate(date);
-    if (end) {
-        jsDate = DateTime.fromObject({
-            ...jsDate.c,
+    const jsDate = deserializeDate(date);
+    if (end && jsDate) {
+        // Fix: Use standard Luxon .set() instead of accessing hidden obsolete properties (.c)
+        const endOfDay = jsDate.set({
             hour: 23,
             minute: 59,
             second: 59,
+            millisecond: 999
         });
+        return serializeDateTime(endOfDay);
     }
     return serializeDateTime(jsDate);
 }
@@ -40,7 +42,8 @@ function fromDateTime(date, type) {
     if (type === "date") {
         return date;
     }
-    return serializeDate(deserializeDateTime(date));
+    const jsDateTime = deserializeDateTime(date);
+    return serializeDate(jsDateTime);
 }
 
 patch(TreeEditor.prototype, {
@@ -63,7 +66,7 @@ patch(TreeEditor.prototype, {
             info.component = Select;
         }
 
-        // env.domain is injected by the DomainSelector patch via useChildSubEnv
+        // env.domain is injected by the DomainSelector patch via useSubEnv
         if (this.env.domain) {
             let dateRanges = this.env.domain.dateRanges || [];
 
@@ -81,58 +84,59 @@ patch(TreeEditor.prototype, {
                 );
             }
 
-            patch(info, {
-                extractProps({ value, update }) {
-                    const props = super.extractProps(...arguments);
+            // Odoo 20: Cleanly attach properties rather than double-patching structural configurations
+            const originalExtractProps = info.extractProps ? info.extractProps.bind(info) : (p) => p;
+            info.extractProps = function (props) {
+                const extractedProps = originalExtractProps(...arguments);
 
-                    if (
-                        fieldDef &&
-                        (fieldDef.type === "date" || fieldDef.type === "datetime") &&
-                        String(node.operator).includes("daterange")
-                    ) {
-                        // Try to find the currently selected range
-                        let selected = dateRanges.find(
-                            (range) =>
-                                range.date_start ===
-                                    fromDateTime(value?.[1], fieldDef.type) &&
-                                range.date_end ===
-                                    fromDateTime(value?.[0], fieldDef.type)
-                        );
+                if (
+                    fieldDef &&
+                    (fieldDef.type === "date" || fieldDef.type === "datetime") &&
+                    String(node.operator).includes("daterange")
+                ) {
+                    // Try to find the currently selected range
+                    let selected = dateRanges.find(
+                        (range) =>
+                            range.date_start ===
+                                fromDateTime(props.value?.[1], fieldDef.type) &&
+                            range.date_end ===
+                                fromDateTime(props.value?.[0], fieldDef.type)
+                    );
 
-                        // Fallback to the first available range
-                        if (!selected && dateRanges.length) {
-                            selected = dateRanges[0];
-                            update([
-                                toDateTime(selected.date_end, fieldDef.type),
-                                toDateTime(selected.date_start, fieldDef.type, true),
+                    // Fallback to the first available range
+                    if (!selected && dateRanges.length) {
+                        selected = dateRanges[0];
+                        props.update([
+                            toDateTime(selected.date_end, fieldDef.type),
+                            toDateTime(selected.date_start, fieldDef.type, true),
+                        ]);
+                    }
+
+                    return {
+                        options: dateRanges.map((dt) => [dt.id, dt.name]),
+                        update: (v) => {
+                            const range = dateRanges.find((r) => r.id === v);
+                            if (!range) {
+                                return;
+                            }
+                            props.update([
+                                toDateTime(range.date_end, fieldDef.type),
+                                toDateTime(range.date_start, fieldDef.type, true),
                             ]);
-                        }
+                        },
+                        value: selected?.id ?? false,
+                    };
+                }
+                return extractedProps;
+            };
 
-                        return {
-                            options: dateRanges.map((dt) => [dt.id, dt.name]),
-                            update: (v) => {
-                                const range = dateRanges.find((r) => r.id === v);
-                                if (!range) {
-                                    return;
-                                }
-                                update([
-                                    toDateTime(range.date_end, fieldDef.type),
-                                    toDateTime(range.date_start, fieldDef.type, true),
-                                ]);
-                            },
-                            value: selected?.id ?? false,
-                        };
-                    }
-                    return props;
-                },
-
-                isSupported(value) {
-                    if (String(node.operator).includes("daterange")) {
-                        return Array.isArray(value) && value.length === 2;
-                    }
-                    return super.isSupported(...arguments);
-                },
-            });
+            const originalIsSupported = info.isSupported ? info.isSupported.bind(info) : () => true;
+            info.isSupported = function (value) {
+                if (String(node.operator).includes("daterange")) {
+                    return Array.isArray(value) && value.length === 2;
+                }
+                return originalIsSupported(...arguments);
+            };
         }
 
         return info;
@@ -141,17 +145,16 @@ patch(TreeEditor.prototype, {
     getOperatorEditorInfo(node) {
         const info = super.getOperatorEditorInfo(...arguments);
 
-        patch(info, {
-            isSupported([operator]) {
-                if (String(node.operator).includes("daterange")) {
-                    return (
-                        typeof operator === "string" &&
-                        String(operator).includes("daterange")
-                    );
-                }
-                return super.isSupported(...arguments);
-            },
-        });
+        const originalIsSupported = info.isSupported ? info.isSupported.bind(info) : () => true;
+        info.isSupported = function ([operator]) {
+            if (String(node.operator).includes("daterange")) {
+                return (
+                    typeof operator === "string" &&
+                    String(operator).includes("daterange")
+                );
+            }
+            return originalIsSupported(...arguments);
+        };
 
         return info;
     },

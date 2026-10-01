@@ -59,8 +59,6 @@ export function removeDateRangeOperators(tree) {
 /**
  * Collapse consecutive <= / >= pairs that share the same path into a single
  * "daterange" (or "daterange_<type_id>") operator.
- * The selected operator is taken from the first <select> currently present
- * in the DOM (same behaviour as the original OCA implementation).
  */
 function createDateRangeOperators(tree) {
     if (["condition", "complex_condition"].includes(tree.type)) {
@@ -76,12 +74,20 @@ function createDateRangeOperators(tree) {
     const children = [];
     let operator = "daterange";
 
-    // Keep the original DOM-based detection for the currently selected operator
+    // Safe isolated check: Only read selects that explicitly belong to the domain tree editor UI
     const selects = document.getElementsByTagName("select");
     if (selects.length) {
-        const selected = selects[0].selectedOptions?.[0];
-        if (selected) {
-            operator = selected.value.replace(/^"|"$/g, "");
+        const domainSelect = Array.from(selects).find(s =>
+            s.closest('.o_domain_selector') ||
+            s.closest('.o_tree_editor') ||
+            s.classList.contains('o_domain_leaf_operator_select')
+        );
+
+        if (domainSelect) {
+            const selected = domainSelect.selectedOptions?.[0];
+            if (selected) {
+                operator = selected.value.replace(/^"|"$/g, "");
+            }
         }
     }
 
