@@ -5,7 +5,7 @@ import { SearchBar } from "@web/search/search_bar/search_bar";
 import { SearchModel } from "@web/search/search_model";
 import { parseDate } from "@web/core/l10n/dates";
 import { registry } from "@web/core/registry";
-import { AnnotationDialog } from "./annotation_dialog";
+import { AnnotationDialog } from "../annotation_dialog/annotation_dialog.esm";
 import { _t } from "@web/core/l10n/translation";
 
 export class MisReportWidget extends Component {
@@ -44,10 +44,12 @@ export class MisReportWidget extends Component {
         onMounted(this._onMounted.bind(this));
     }
 
-    // Lifecycle
     async willStart() {
         const instanceId = this._instanceId();
-        if (!instanceId) return;
+
+        if (!instanceId) {
+            return;
+        }
 
         const [result] = await this.orm.read(
             "mis.report.instance",
@@ -71,7 +73,11 @@ export class MisReportWidget extends Component {
             this.widget_show_filters = result.widget_show_filters;
             this.widget_show_settings_button = result.widget_show_settings_button;
             this.widget_search_view_id = result.widget_search_view_id?.[0];
-            this.state.pivot_date = result.pivot_date ? parseDate(result.pivot_date) : null;
+
+            this.state.pivot_date = result.pivot_date
+                ? parseDate(result.pivot_date)
+                : null;
+
             this.widget_show_pivot_date = result.widget_show_pivot_date;
 
             if (this.showSearchBar) {
@@ -82,9 +88,14 @@ export class MisReportWidget extends Component {
             }
 
             this.wide_display = result.wide_display_by_default;
+
             this.refresh();
-            this.state.can_edit_annotation = result.user_can_edit_annotation;
-            this.state.can_read_annotation = result.user_can_read_annotation;
+
+            this.state.can_edit_annotation =
+                result.user_can_edit_annotation;
+
+            this.state.can_read_annotation =
+                result.user_can_read_annotation;
         }
     }
 
@@ -110,38 +121,48 @@ export class MisReportWidget extends Component {
         }
 
         const recordContext = this.props.record?.context || {};
+
         if (recordContext.active_model === "mis.report.instance") {
             return recordContext.active_id;
         }
+
         return null;
     }
 
     get context() {
         const recordContext = this.props.record?.context || {};
+
         return {
             ...recordContext,
             ...(this.showSearchBar && {
                 mis_analytic_domain: this.searchModel.searchDomain,
             }),
             ...(this.showPivotDate &&
-                this.state.pivot_date && { mis_pivot_date: this.state.pivot_date }),
+                this.state.pivot_date && {
+                    mis_pivot_date: this.state.pivot_date,
+                }),
         };
     }
 
     async drilldown(event) {
         const drilldown = JSON.parse(event.target.dataset.drilldown);
+
         const action = await this.orm.call(
             "mis.report.instance",
             "drilldown",
             [this._instanceId(), drilldown],
             { context: this.context }
         );
+
         this.action.doAction(action);
     }
 
     async refresh() {
         const instanceId = this._instanceId();
-        if (!instanceId) return;
+
+        if (!instanceId) {
+            return;
+        }
 
         this.state.mis_report_data = await this.orm.call(
             "mis.report.instance",
@@ -153,14 +174,18 @@ export class MisReportWidget extends Component {
 
     async refresh_annotation() {
         const instanceId = this._instanceId();
-        if (!instanceId) return;
 
-        this.state.mis_report_data.notes = await this.orm.call(
-            "mis.report.instance",
-            "get_notes_by_cell_id",
-            [instanceId],
-            { context: this.context }
-        );
+        if (!instanceId) {
+            return;
+        }
+
+        this.state.mis_report_data.notes =
+            await this.orm.call(
+                "mis.report.instance.annotation",
+                "get_notes_by_cell_id",
+                [instanceId],
+                { context: this.context }
+            );
     }
 
     async printPdf() {
@@ -170,6 +195,7 @@ export class MisReportWidget extends Component {
             [this._instanceId()],
             { context: this.context }
         );
+
         this.action.doAction(action);
     }
 
@@ -180,6 +206,7 @@ export class MisReportWidget extends Component {
             [this._instanceId()],
             { context: this.context }
         );
+
         this.action.doAction(action);
     }
 
@@ -190,6 +217,7 @@ export class MisReportWidget extends Component {
             [this._instanceId()],
             { context: this.context }
         );
+
         this.action.doAction(action);
     }
 
@@ -200,6 +228,7 @@ export class MisReportWidget extends Component {
             [cell_id, this._instanceId()],
             { context: this.context }
         );
+
         await this.refresh_annotation();
     }
 
@@ -210,6 +239,7 @@ export class MisReportWidget extends Component {
             [cell_id, this._instanceId(), text],
             { context: this.context }
         );
+
         await this.refresh_annotation();
     }
 
@@ -217,13 +247,17 @@ export class MisReportWidget extends Component {
         const cell_id = event.target.dataset.cellId;
         const note = this.state.mis_report_data.notes[cell_id];
         const note_text = (note && note.text) || "";
+
         this.dialog.add(AnnotationDialog, {
             title: _t("Annotate"),
             annotationText: note_text,
+
             confirm: async (text) => {
                 await this._save_annotation(cell_id, text);
             },
+
             canRemove: typeof note !== "undefined",
+
             remove: async () => {
                 await this._remove_annotation(cell_id);
             },
@@ -232,7 +266,8 @@ export class MisReportWidget extends Component {
 
     async remove_annotation(event) {
         const cell_id = event.target.dataset.cellId;
-        this._remove_annotation(cell_id);
+
+        await this._remove_annotation(cell_id);
     }
 
     onDateTimeChanged(ev) {
@@ -247,16 +282,27 @@ export class MisReportWidget extends Component {
 
     async resize_sheet() {
         const sheetElement = document.querySelector(".o_form_sheet_bg");
+
         if (sheetElement) {
             sheetElement.classList.toggle(
                 "oe_mis_builder_report_wide_sheet",
                 !!this.wide_display
             );
         }
-        const buttonResizeElement = document.getElementById("icon_resize");
+
+        const buttonResizeElement =
+            document.getElementById("icon_resize");
+
         if (buttonResizeElement) {
-            buttonResizeElement.classList.toggle("fa-expand", !this.wide_display);
-            buttonResizeElement.classList.toggle("fa-compress", !!this.wide_display);
+            buttonResizeElement.classList.toggle(
+                "fa-expand",
+                !this.wide_display
+            );
+
+            buttonResizeElement.classList.toggle(
+                "fa-compress",
+                !!this.wide_display
+            );
         }
     }
 }
@@ -265,4 +311,7 @@ export const misReportWidget = {
     component: MisReportWidget,
 };
 
-registry.category("fields").add("mis_report_widget", misReportWidget);
+registry.category("fields").add(
+    "mis_report_widget",
+    misReportWidget
+);
