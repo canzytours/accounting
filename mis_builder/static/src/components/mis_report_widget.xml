@@ -29,37 +29,40 @@
                             </div>
                             <div class="oe_mis_builder_action_buttons">
                                 <button t-on-click="refresh" class="btn">
-                                    <span class="fa fa-refresh" /> Refresh </button>
+                                    <span class="fa fa-refresh" /> Refresh
+                                </button>
                                 <button t-on-click="printPdf" class="btn">
-                                    <span class="fa fa-print" /> Print </button>
+                                    <span class="fa fa-print" /> Print
+                                </button>
                                 <button t-on-click="exportXls" class="btn">
-                                    <span class="fa fa-download" /> Export </button>
+                                    <span class="fa fa-download" /> Export
+                                </button>
                                 <button
                                     t-on-click="displaySettings"
                                     t-if="widget_show_settings_button"
                                     class="btn"
                                 >
-                                    <span class="fa fa-cog" /> Settings </button>
+                                    <span class="fa fa-cog" /> Settings
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
+
                 <div class="o_list_renderer o_renderer table-responsive">
-                    <table
-                        class="o_list_table table table-sm table-hover table-striped mis_builder"
-                    >
+                    <table class="o_list_table table table-sm table-hover table-striped mis_builder">
                         <thead>
                             <tr
                                 t-foreach="state.mis_report_data.header"
                                 t-as="row"
-                                t-key="row_index"
+                                t-key="row_index or row.label or row_key"
                                 class="oe_list_header_columns"
                             >
                                 <th class="oe_list_header_char" />
                                 <th
                                     t-foreach="row.cols"
                                     t-as="col"
-                                    t-key="col_index"
+                                    t-key="col_index or col.label or col_key"
                                     class="oe_list_header_char mis_builder_collabel"
                                     t-att-colspan="col.colspan"
                                 >
@@ -75,9 +78,9 @@
                             <tr
                                 t-foreach="state.mis_report_data.body"
                                 t-as="row"
-                                t-key="row_index"
+                                t-key="row_index or row.label or row_key"
                             >
-                                <td t-att="{'style': row.style}">
+                                <td t-att-style="row.style">
                                     <t t-out="row.label" />
                                     <t t-if="row.description">
                                         <br />
@@ -87,8 +90,9 @@
                                 <td
                                     t-foreach="row.cells"
                                     t-as="cell"
-                                    t-key="cell_index"
-                                    t-att="{'style': cell.style, 'title': cell.val_c}"
+                                    t-key="cell_index or cell.cell_id or cell_key"
+                                    t-att-style="cell.style"
+                                    t-att-title="cell.val_c"
                                     class="mis_builder_amount oe_mis_builder_dropdown"
                                 >
                                     <div>
@@ -99,18 +103,18 @@
                                                 t-on-click.prevent="drilldown"
                                                 t-att-data-drilldown="JSON.stringify(cell.drilldown_arg)"
                                             >
-                                                <t t-esc="cell.val_r" />
+                                                <t t-out="cell.val_r" />
                                             </a>
                                         </t>
                                         <t t-else="">
-                                            <t t-esc="cell.val_r" />
+                                            <t t-out="cell.val_r" />
                                         </t>
                                         <span class="oe_mis_builder_footnote">
                                             <div t-if="notes[cell.cell_id]">
                                                 <a
-                                                    t-att-id="'note_'+notes[cell.cell_id].sequence"
-                                                    t-out="notes[cell.cell_id] and notes[cell.cell_id].sequence"
-                                                    t-att="{'title': notes[cell.cell_id].text}"
+                                                    t-att-id="'note_' + notes[cell.cell_id].sequence"
+                                                    t-out="notes[cell.cell_id].sequence"
+                                                    t-att-title="notes[cell.cell_id].text"
                                                     href="#footnotes"
                                                 />
                                             </div>
@@ -123,9 +127,8 @@
                                             >
                                                 <div
                                                     data-bs-toggle="dropdown"
-                                                    t-attf-class="dropdown-toggle"
+                                                    class="dropdown-toggle"
                                                 />
-
                                                 <div
                                                     class="dropdown-menu o_filter_menu"
                                                     role="menu"
@@ -156,33 +159,38 @@
                         </tfoot>
                     </table>
                 </div>
+
                 <!-- Table with notes -->
                 <div class="oe_mis_builder_footnote_div" id="footnotes">
                     <table class="oe_mis_builder_footnote_table">
-                        <t
-                            t-foreach="state.mis_report_data.notes"
-                            t-as="cell_id"
-                            t-key="cell_id"
-                        >
-                            <tr>
-                                <td><a
-                                    t-out="notes[cell_id].sequence"
-                                    t-att-href="'#note_'+notes[cell_id].sequence"
-                                />. </td>
-                                <td>
-                                    <t t-out="notes[cell_id].text" />
-                                </td>
-                                <td>
-                                    <i
-                                        href="javascript:void(0)"
-                                        t-on-click="remove_annotation"
-                                        t-att-data-cell-id="cell_id"
-                                        class="btn fa fa-trash-o"
-                                        t-if="state.can_edit_annotation"
-                                    />
-                                </td>
-                            </tr>
-                        </t>
+                        <tbody>
+                            <t
+                                t-foreach="Object.keys(notes)"
+                                t-as="cell_id"
+                                t-key="cell_id"
+                            >
+                                <tr>
+                                    <td>
+                                        <a
+                                            t-out="notes[cell_id].sequence"
+                                            t-att-href="'#note_' + notes[cell_id].sequence"
+                                        />.
+                                    </td>
+                                    <td>
+                                        <t t-out="notes[cell_id].text" />
+                                    </td>
+                                    <td>
+                                        <i
+                                            href="javascript:void(0)"
+                                            t-on-click="remove_annotation"
+                                            t-att-data-cell-id="cell_id"
+                                            class="btn fa fa-trash-o"
+                                            t-if="state.can_edit_annotation"
+                                        />
+                                    </td>
+                                </tr>
+                            </t>
+                        </tbody>
                     </table>
                 </div>
             </t>

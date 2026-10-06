@@ -3,7 +3,7 @@
     <record model="ir.ui.view" id="mis_report_instance_result_view_form">
         <field name="name">mis.report.instance.result.view.form</field>
         <field name="model">mis.report.instance</field>
-        <field name="priority" eval="20 " />
+        <field name="priority" eval="20" />
         <field name="arch" type="xml">
             <form
                 string="MIS Report Preview"
@@ -22,6 +22,7 @@
             </form>
         </field>
     </record>
+
     <record model="ir.ui.view" id="mis_report_instance_view_list">
         <field name="name">mis.report.instance.view.list</field>
         <field name="model">mis.report.instance</field>
@@ -51,6 +52,7 @@
             </list>
         </field>
     </record>
+
     <record model="ir.ui.view" id="mis_report_instance_view_form">
         <field name="name">mis.report.instance.view.form</field>
         <field name="model">mis.report.instance</field>
@@ -59,27 +61,27 @@
             <form string="MIS Report Instance">
                 <sheet>
                     <field name="temporary" invisible="1" />
-                    <div class="d-flex justify-content-end" name="buttons">
+                    <div class="d-flex justify-content-end gap-1" name="buttons">
                         <button
                             type="object"
                             name="preview"
                             string="Preview"
                             icon="fa-search"
-                            class="btn"
+                            class="btn btn-secondary"
                         />
                         <button
                             type="object"
                             name="print_pdf"
                             string="Print"
                             icon="fa-print"
-                            class="btn"
+                            class="btn btn-secondary"
                         />
                         <button
                             type="object"
                             name="export_xls"
                             string="Export"
                             icon="fa-download"
-                            class="btn"
+                            class="btn btn-secondary"
                         />
                         <button
                             type="action"
@@ -87,7 +89,7 @@
                             string="Add to dashboard"
                             icon="fa-plus"
                             invisible="temporary"
-                            class="btn"
+                            class="btn btn-secondary"
                         />
                         <button
                             type="object"
@@ -95,7 +97,7 @@
                             string="Save"
                             icon="fa-save"
                             invisible="not temporary"
-                            class="btn"
+                            class="btn btn-primary"
                         />
                     </div>
                     <div class="oe_title">
@@ -212,6 +214,7 @@
             </form>
         </field>
     </record>
+
     <record model="ir.actions.act_window" id="mis_report_instance_view_action">
         <field name="name">MIS Reports</field>
         <field name="view_id" ref="mis_report_instance_view_list" />
@@ -220,6 +223,7 @@
         <field name="domain">[('temporary', '=', False)]</field>
         <field name="path">mis-report-instances</field>
     </record>
+
     <menuitem
         id="mis_report_finance_menu"
         parent="account.menu_finance_reports"
@@ -234,10 +238,11 @@
         action="mis_report_instance_view_action"
         sequence="10"
     />
+
     <record id="wizard_mis_report_instance_view_form" model="ir.ui.view">
         <field name="model">mis.report.instance</field>
         <field name="priority">99</field>
-        <field name="inherit_id" ref="mis_builder.mis_report_instance_view_form" />
+        <field name="inherit_id" ref="mis_report_instance_view_form" />
         <field name="mode">primary</field>
         <field name="arch" type="xml">
             <field name="name" position="attributes">
@@ -253,37 +258,39 @@
             <sheet position="after">
                 <footer>
                     <button
-                    type="object"
-                    name="save_report"
-                    string="Save"
-                    icon="fa-save"
-                    class="btn"
-                />
+                        type="object"
+                        name="save_report"
+                        string="Save"
+                        icon="fa-save"
+                        class="btn btn-primary"
+                    />
                     <button
-                    type="object"
-                    name="preview"
-                    string="Preview"
-                    icon="fa-search"
-                    class="btn"
-                />
+                        type="object"
+                        name="preview"
+                        string="Preview"
+                        icon="fa-search"
+                        class="btn btn-secondary"
+                    />
                     <button
-                    type="object"
-                    name="print_pdf"
-                    string="Print"
-                    icon="fa-print"
-                    class="btn"
-                />
+                        type="object"
+                        name="print_pdf"
+                        string="Print"
+                        icon="fa-print"
+                        class="btn btn-secondary"
+                    />
                     <button
-                    type="object"
-                    name="export_xls"
-                    string="Export"
-                    icon="fa-download"
-                    class="btn"
-                /> or <button string="Cancel" class="oe_link" special="cancel" />
+                        type="object"
+                        name="export_xls"
+                        string="Export"
+                        icon="fa-download"
+                        class="btn btn-secondary"
+                    />
+                    <button string="Cancel" class="btn btn-secondary" special="cancel" />
                 </footer>
             </sheet>
         </field>
     </record>
+
     <record model="ir.actions.act_window" id="last_mis_report_instance_view_action">
         <field name="name">Last Reports Generated</field>
         <field name="view_id" ref="mis_report_instance_view_list" />
@@ -292,6 +299,7 @@
         <field name="domain">[('temporary', '=', True)]</field>
         <field name="path">mis-report-instances-last-generated</field>
     </record>
+
     <menuitem
         id="last_wizard_mis_report_instance_view_menu"
         parent="mis_report_finance_menu"
@@ -299,6 +307,7 @@
         action="last_mis_report_instance_view_action"
         sequence="20"
     />
+
     <record model="ir.ui.view" id="mis_report_instance_period_view_form">
         <field name="model">mis.report.instance.period</field>
         <field name="priority" eval="16" />
@@ -316,7 +325,7 @@
                     <field
                         name="report_instance_id"
                         invisible="1"
-                        required="id != False"
+                        required="id"
                     />
                     <field name="report_id" invisible="1" />
                     <field name="id" invisible="1" />

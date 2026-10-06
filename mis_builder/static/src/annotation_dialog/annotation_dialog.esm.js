@@ -1,21 +1,21 @@
-import {Component, useState} from "@odoo/owl";
-import {Dialog} from "@web/core/dialog/dialog";
+import { Component, useState } from "@odoo/owl";
+import { Dialog } from "@web/core/dialog/dialog";
 
 export class AnnotationDialog extends Component {
-    static components = {Dialog};
+    static components = { Dialog };
     static props = {
         close: Function,
-        annotationText: {type: String},
-        confirm: {type: Function},
-        title: {type: String},
-        remove: {type: Function},
-        canRemove: {type: Boolean},
+        annotationText: { type: String, optional: true },
+        confirm: { type: Function },
+        title: { type: String, optional: true },
+        remove: { type: Function },
+        canRemove: { type: Boolean, optional: true },
     };
     static template = "mis_builder.AnnotationDialog";
 
     setup() {
         this.state = useState({
-            annotationText: this.props.annotationText,
+            annotationText: this.props.annotationText || "",
         });
     }
 
