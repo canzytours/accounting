@@ -1,16 +1,26 @@
-import { Component, onMounted, onWillStart, proxy } from "@odoo/owl";
+/** @odoo-module **/
+
+import { Component, onMounted, onWillStart, proxy, useProps, t } from "@odoo/owl";
 import { useBus, useService } from "@web/core/utils/hooks";
 import { DateTimeInput } from "@web/core/datetime/datetime_input";
 import { SearchBar } from "@web/search/search_bar/search_bar";
 import { SearchModel } from "@web/search/search_model";
 import { parseDate } from "@web/core/l10n/dates";
 import { registry } from "@web/core/registry";
+import { standardFieldProps } from "@web/views/fields/standard_field_props";
 import { AnnotationDialog } from "../annotation_dialog/annotation_dialog.esm";
 import { _t } from "@web/core/l10n/translation";
 
 export class MisReportWidget extends Component {
     static components = { SearchBar, DateTimeInput };
     static template = "mis_builder.MisReportWidget";
+
+    // OWL 3: props must be declared with useProps (this.props is no longer automatic)
+    props = useProps({
+        ...standardFieldProps,
+        // keep extra keys optional so the widget still works in dashboards / legacy call sites
+        value: t.any().optional(),
+    });
 
     setup() {
         this.orm = useService("orm");
@@ -33,8 +43,7 @@ export class MisReportWidget extends Component {
             dialog: this.dialog,
         });
 
-        // OWL 3: env is read-only. Use compatibility layer useSubEnv if available.
-        // Do NOT do: this.env.searchModel = ...
+        // useSubEnv may still be available via the Owl 2→3 compatibility layer
         const useSubEnv = globalThis.owl?.useSubEnv;
         if (typeof useSubEnv === "function") {
             useSubEnv({ searchModel: this.searchModel });
@@ -42,11 +51,16 @@ export class MisReportWidget extends Component {
 
         useBus(this.searchModel, "update", async () => {
             await this.searchModel.sectionsPromise;
-            this.refresh();
+            await this.refresh();
         });
 
-        onWillStart(this.willStart.bind(this));
-        onMounted(this._onMounted.bind(this));
+        // Use arrow functions so `this` is always the component instance
+        onWillStart(async () => {
+            await this.willStart();
+        });
+        onMounted(() => {
+            this._onMounted();
+        });
     }
 
     async willStart() {
@@ -84,7 +98,6 @@ export class MisReportWidget extends Component {
         this.state.pivot_date = result.pivot_date
             ? parseDate(result.pivot_date)
             : null;
-
         this.widget_show_pivot_date = result.widget_show_pivot_date;
 
         if (this.showSearchBar) {
@@ -102,12 +115,11 @@ export class MisReportWidget extends Component {
         this.state.can_read_annotation = result.user_can_read_annotation;
     }
 
-    async _onMounted() {
+    _onMounted() {
         this.resize_sheet();
     }
 
     get showSearchBar() {
-        // Only show filters when we could inject searchModel into env
         const hasSubEnv = typeof globalThis.owl?.useSubEnv === "function";
         return (
             hasSubEnv &&
@@ -122,17 +134,18 @@ export class MisReportWidget extends Component {
     }
 
     /**
-     * Resolve the MIS report instance ID.
-     * Odoo 19/20 field widgets no longer receive props.value.
+     * Resolve the mis.report.instance id.
+     * Odoo 19/20 field widgets: prefer record.resId, then value, then context.active_id.
      */
     _instanceId() {
-        if (this.props.record?.resId) {
-            return this.props.record.resId;
+        const props = this.props || {};
+        if (props.record?.resId) {
+            return props.record.resId;
         }
-        if (this.props.value) {
-            return this.props.value;
+        if (props.value) {
+            return props.value;
         }
-        const recordContext = this.props.record?.context || {};
+        const recordContext = props.record?.context || {};
         if (recordContext.active_model === "mis.report.instance") {
             return recordContext.active_id;
         }
@@ -140,7 +153,8 @@ export class MisReportWidget extends Component {
     }
 
     get context() {
-        const recordContext = this.props.record?.context || {};
+        const props = this.props || {};
+        const recordContext = props.record?.context || {};
         return {
             ...recordContext,
             ...(this.showSearchBar && {
@@ -272,7 +286,7 @@ export class MisReportWidget extends Component {
         this.resize_sheet();
     }
 
-    async resize_sheet() {
+    resize_sheet() {
         const sheetElement = document.querySelector(".o_form_sheet_bg");
         if (sheetElement) {
             sheetElement.classList.toggle(
